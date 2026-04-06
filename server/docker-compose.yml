@@ -1,0 +1,25 @@
+name: pharmasys-dev
+
+services:
+  pharmasys-postgres:
+    image: postgres:latest
+    container_name: pharmasys_postgres
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRE_DB}
+      POSTGRES_USER: ${POSTGRE_USER}
+      POSTGRES_PASSWORD: ${POSTGRE_PASSWORD}
+    ports:
+      - "${POSTGRE_PORT}:5432"
+    env_file:
+      - .env
+    volumes:
+      - pharmasys_postgre_data:/var/lib/postgresql/data
+    networks:
+      - pharmasys_network
+
+networks:
+  pharmasys_network:
+
+volumes:
+  pharmasys_postgre_data:
