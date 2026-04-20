@@ -36,6 +36,17 @@ class UserRepository {
     return newUser;
   }
 
+  static async getUsersByRoles(roles) {
+    const users = await prisma.user.findMany({
+      where: {
+        role: {
+          in: roles,
+        },
+      },
+    });
+    return users;
+  }
+
   static async getUserByEmailOrUsername(emailOrUsername) {
     const user = await prisma.user.findFirst({
       where: {

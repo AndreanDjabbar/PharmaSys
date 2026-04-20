@@ -19,6 +19,33 @@ class UserService {
         };
     }
 
+    static async getUsers(currentUserRole) {
+        if (!currentUserRole) {
+            const error = new Error("User role is required");
+            error.statusCode = 400;
+            throw error;
+        }
+
+        const roleHierarchys = {
+            "DEVELOPER": 3,
+            "ADMIN": 2,
+            "STAFF": 1,
+        }
+        const accessibleRoles = Object.keys(roleHierarchys).filter(roleHierarchy => roleHierarchys[roleHierarchy] < roleHierarchys[currentUserRole]);
+        const users = await UserRepository.getUsersByRoles(accessibleRoles);
+        return users.map(user => ({
+            id: user.id,
+            name: user.name,
+            username: user.username,
+            createdBy: user.created_by,
+            createdAt: user.created_at,
+            updatedAt: user.updated_at,
+            isVerified: user.is_verified,
+            role: user.role,
+            email: user.email,
+        }));
+    }
+
     static async login(emailOrUsername, password) {
         const user = await UserRepository.getUserByEmailOrUsername(emailOrUsername);
         if (!user) {

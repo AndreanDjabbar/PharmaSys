@@ -54,7 +54,7 @@ export const loginController = async (req, res) => {
     });
 };
 
-export const createStaffController = async (req, res) => {
+export const createUserController = async (req, res) => {
     const {
         name,
         username,
@@ -72,6 +72,14 @@ export const createStaffController = async (req, res) => {
         currentUserID: userID 
     });
     return responseSuccess(res, 201, "User created successfully", "data", result);
+}
+
+export const getUsersController = async (req, res) => {
+    const { role } = req.user;
+    const result = await UserService.getUsers(role);
+    return responseSuccess(res, 200, "Users retrieved successfully", "data", {
+        users: result
+    });
 }
 
 export const updateStaffController = async (req, res) => {

@@ -38,7 +38,14 @@ router.post(
   timeout('8s'),
   validateSchema(createUserSchema),
   authorizedRoles("ADMIN", "DEVELOPER"), 
-  catchAsync(UserController.createStaffController)
+  catchAsync(UserController.createUserController)
+);
+router.get(
+  "/",
+  timeout('5s'),
+  validateToken,
+  authorizedRoles("ADMIN", "DEVELOPER"), 
+  catchAsync(UserController.getUsersController)
 );
 router.delete(
   "/staff/:id",
