@@ -1,35 +1,31 @@
 import jwt from 'jsonwebtoken';
-import { JWT_EXPIRES_IN } from './env.util.js';
-import fs from 'fs';
+import { JWT_EXPIRES_IN, JWT_SECRET } from './env.util.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-const PRIVATE_KEY = fs.readFileSync(path.join(__dirname, '../../keys/private.key'), 'utf8');
-const PUBLIC_KEY = fs.readFileSync(path.join(__dirname, '../../keys/public.key'), 'utf8');
 
 export const generateJWTToken = ({
     userID,
     email,
+    username,
     role
 }) => {
     const payload = {
         userID,
         email,
+        username,
         role,
     };
 
-    return jwt.sign(payload, PRIVATE_KEY, {
-        algorithm: 'RS256',
+    return jwt.sign(payload, JWT_SECRET, {
+        algorithm: 'HS256',
         expiresIn: JWT_EXPIRES_IN,
     });
 };
 
 export const verifyToken = (token) => {
     try {
-        return jwt.verify(token, PUBLIC_KEY, {
-            algorithms: ['RS256'],
+        return jwt.verify(token, JWT_SECRET, {
+            algorithms: ['HS256'],
         });
     } catch (error) {
         if (error.name === 'TokenExpiredError') {
