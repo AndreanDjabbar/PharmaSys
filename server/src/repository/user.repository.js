@@ -13,6 +13,40 @@ class UserRepository {
     return user;
   }
 
+  static async create({
+    name,
+    username,
+    email,
+    isVerified,
+    password,
+    role,
+    createdBy,
+  }) {
+    const newUser = await prisma.user.create({
+      data: {
+        name,
+        username,
+        email,
+        password,
+        role,
+        is_verified: isVerified,
+        created_by: createdBy,
+      },
+    });
+    return newUser;
+  }
+
+  static async getUsersByRoles(roles) {
+    const users = await prisma.user.findMany({
+      where: {
+        role: {
+          in: roles,
+        },
+      },
+    });
+    return users;
+  }
+
   static async getUserByEmailOrUsername(emailOrUsername) {
     const user = await prisma.user.findFirst({
       where: {

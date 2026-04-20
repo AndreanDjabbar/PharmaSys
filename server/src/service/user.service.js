@@ -19,6 +19,33 @@ class UserService {
         };
     }
 
+    static async getUsers(currentUserRole) {
+        if (!currentUserRole) {
+            const error = new Error("User role is required");
+            error.statusCode = 400;
+            throw error;
+        }
+
+        const roleHierarchys = {
+            "DEVELOPER": 3,
+            "ADMIN": 2,
+            "STAFF": 1,
+        }
+        const accessibleRoles = Object.keys(roleHierarchys).filter(roleHierarchy => roleHierarchys[roleHierarchy] < roleHierarchys[currentUserRole]);
+        const users = await UserRepository.getUsersByRoles(accessibleRoles);
+        return users.map(user => ({
+            id: user.id,
+            name: user.name,
+            username: user.username,
+            createdBy: user.created_by,
+            createdAt: user.created_at,
+            updatedAt: user.updated_at,
+            isVerified: user.is_verified,
+            role: user.role,
+            email: user.email,
+        }));
+    }
+
     static async login(emailOrUsername, password) {
         const user = await UserRepository.getUserByEmailOrUsername(emailOrUsername);
         if (!user) {
@@ -57,170 +84,49 @@ class UserService {
         };
     }
     
-    static async register(name, email, password) {
-        const existingUser = await UserRepository.getByEmail(email);
-        if (existingUser) {
-            const error = new Error("Email already in use");
-            error.statusCode = 409;
-            throw error;
-        }
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const newUser = await UserRepository.create({
-            name,
-            email,
-            password: hashedPassword,
-            role: "USER",
-            restaurant_id: restaurantId
-        });
-        const otpCode = generateOTPNumber();
-        const emailVerificationToken = generateRandomToken(100);
-        const redisKey = `emailVerification:${newUser.id}`;
-
-        const redisClient = await getRedisClient();
-        await redisClient.del(redisKey);
-        await redisClient.hset(redisKey, {
-            otpCode,
-            emailVerificationToken
-        });
-        await redisClient.expire(redisKey, 5 * 60);
-
-        sendVerificationEmail(email, emailVerificationToken, otpCode);
-        return {
-            user: newUser,
-            token: emailVerificationToken
-        };
-    }
-
-    static async verifyRegisterToken(token, email) {
-        const user = await UserRepository.getByEmail(email);
-        if (!user) {
-            const error = new Error("User not found");
-            error.statusCode = 404;
-            throw error;
-        }
-
-        const redisKey = `emailVerification:${user.id}`;
-        const redisClient = await getRedisClient();
-        const storedToken = await redisClient.hget(redisKey, "emailVerificationToken");
-        if (token !== storedToken) {
-            const error = new Error("Invalid or expired token");
-            error.statusCode = 400;
-            throw error;
-        }
-        return user;
-    }
-
-    static async verifyRegisterOtp(token, email, otpCode) {
-        const user = await UserRepository.getByEmail(email);
-        if (!user) {
-            const error = new Error("User not found");
-            error.statusCode = 404;
-            throw error;
-        }
-        const redisKey = `emailVerification:${user.id}`;
-        const redisClient = await getRedisClient();
-        const cachedData = await redisClient.hgetall(redisKey);
-
-        if(!cachedData || Object.keys(cachedData).length === 0) {
-            const error = new Error("OTP has expired or is invalid");
-            error.statusCode = 400;
-            throw error;
-        }
-
-        if(cachedData.otpCode !== otpCode) {
-            const error = new Error("Invalid OTP code");
-            error.statusCode = 400;
-            throw error;
-        }
-
-        if (token !== cachedData.emailVerificationToken) {
-            const error = new Error("Invalid or expired token");
-            error.statusCode = 400;
-            throw error;
-        }
-
-        await UserRepository.updateUser(user.id, { is_verified: true });
-        await redisClient.del(redisKey);
-        return user;
-    }
-
-    static async forgotPasswordEmailVerification(email) {
-        const user = await UserRepository.getByEmail(email);
-        if (!user) {
-            const error = new Error("User not found");
-            error.statusCode = 404;
-            throw error;
-        }
-
-        const redisClient = await getRedisClient();
-        const resetToken = generateRandomToken(100);
-        const redisKey = `forgotPassword:${user.id}`;
-        await redisClient.hset(redisKey, {
-            resetToken
-        });
-        await redisClient.expire(redisKey, 15 * 60);
-
-        sendResetPasswordEmail(email, resetToken);
-    }
-
-    static async forgotPasswordLinkVerification(token, email) {
-        const user = await UserRepository.getByEmail(email);
-        if (!user) {
-            const error = new Error("User not found");
-            error.statusCode = 404;
-            throw error;
-        }
-
-        const redisKey = `forgotPassword:${user.id}`;
-        const redisClient = await getRedisClient();
-        const storedToken = await redisClient.hget(redisKey, "resetToken");
-        if (token !== storedToken) {
-            const error = new Error("Invalid or expired token");
-            error.statusCode = 400;
-            throw error;
-        }
-    }
-
-    static async forgotPasswordReset(token, email, newPassword) {
-        const user = await UserRepository.getByEmail(email);
-        if (!user) {
-            const error = new Error("User not found");
-            error.statusCode = 404;
-            throw error;
-        }
-
-        if (!user.is_verified) {
-            const error = new Error("User email not verified");
-            error.statusCode = 403;
-            throw error;
-        }
-
-        const redisKey = `forgotPassword:${user.id}`;
-        const redisClient = await getRedisClient();
-        const storedToken = await redisClient.hget(redisKey, "resetToken");
-        if (token !== storedToken) {
-            const error = new Error("Invalid or expired token");
-            error.statusCode = 400;
-            throw error;
-        }
-        const hashedPassword = await bcrypt.hash(newPassword, 10);
-        await UserRepository.updateUser(user.id, { password: hashedPassword });
-        await redisClient.del(redisKey);
-    }
-
     static async logout(token) {
         if (!token) {
             const error = new Error("Token is required");
             error.statusCode = 400;
             throw error;
         }
-        const redisClient = await getRedisClient();
-        const blacklistKey = `blacklistToken:${token}`;
-        await redisClient.set(blacklistKey, "blacklisted");
-        const decoded = verifyToken(token);
-        const expiresAt = new Date(decoded.exp * 1000);
-        const ttl = Math.floor((expiresAt.getTime() - Date.now()) / 1000);
-        await redisClient.expire(blacklistKey, ttl);
+    }
+
+    static async createUser({ name, username, email, password, role, currentUserID }) {
+        const existingUserByEmail = await UserRepository.getByEmail(email);
+        if (existingUserByEmail) {
+            const error = new Error("Email is already in use");
+            error.statusCode = 400;
+            throw error;
+        }
+
+        const existingUserByUsername = await UserRepository.getByUsername(username);
+        if (existingUserByUsername) {
+            const error = new Error("Username is already in use");
+            error.statusCode = 400;
+            throw error;
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const newUser = await UserRepository.create({
+            name,
+            username,
+            email,
+            isVerified: false,
+            password: hashedPassword,
+            role,
+            createdBy: currentUserID,
+        });
+
+        return {
+            id: newUser.id,
+            name: newUser.name,
+            username: newUser.username,
+            email: newUser.email,
+            role: newUser.role,
+            createdBy: newUser.created_by,
+            isVerified: newUser.is_verified,
+        };
     }
 }
 
