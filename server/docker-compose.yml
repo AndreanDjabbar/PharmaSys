@@ -2,7 +2,7 @@ name: pharmasys-dev
 
 services:
   pharmasys-postgres:
-    image: postgres:latest
+    image: postgres:16
     container_name: pharmasys_postgres
     restart: always
     environment:
