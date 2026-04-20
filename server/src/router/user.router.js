@@ -9,16 +9,67 @@ import timeout from "connect-timeout";
 import { 
   createStaffSchema ,
   createTenantAdminSchema,
+  loginSchema,
+  registerSchema,
+  registerOTPCodeSchema,
+  forgotPasswordEmailSchema,
+  forgotPasswordResetSchema,
   updateStaffSchema
 } from "../validation/user.validation.js";
 
 const router = express.Router();
 
+router.post(
+    "/register", 
+    timeout('10s'),
+    validateSchema(registerSchema),
+    catchAsync(UserController.registerController)
+);
+router.post(
+    "/verify/register-token", 
+    timeout('5s'),
+    catchAsync(UserController.verifyRegisterTokenController)
+);
+router.post(
+    "/verify/register-otp", 
+    timeout('5s'),
+    validateSchema(registerOTPCodeSchema), 
+    catchAsync(UserController.verifyRegisterOtpController)
+);
+router.post(
+    "/forgot-password/email-verification", 
+    timeout('8s'),
+    validateSchema(forgotPasswordEmailSchema), 
+    catchAsync(UserController.forgotPasswordEmailVerificationController)
+);
+router.post(
+    "/forgot-password/link-verification", 
+    timeout('5s'),
+    catchAsync(UserController.forgotPasswordLinkVerificationController)
+);
+router.post(
+    "/forgot-password/reset-password",
+    timeout('5s'),
+    validateSchema(forgotPasswordResetSchema), 
+    catchAsync(UserController.forgotPasswordResetController)
+);
+router.post(
+    "/logout", 
+    timeout('3s'),
+    validateToken, 
+    catchAsync(UserController.logoutController)
+);
 router.get(
   "/me", 
   timeout('3s'),
   validateToken, 
   catchAsync(UserController.getMyUserDataController)
+);
+router.post(
+    "/login", 
+    timeout('2s'),
+    validateSchema(loginSchema),
+    catchAsync(UserController.loginController)
 );
 router.post(
   "/tenant",
