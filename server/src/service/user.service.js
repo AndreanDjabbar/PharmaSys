@@ -64,6 +64,43 @@ class UserService {
             throw error;
         }
     }
+
+    static async createUser({ name, username, email, password, role, currentUserID }) {
+        const existingUserByEmail = await UserRepository.getByEmail(email);
+        if (existingUserByEmail) {
+            const error = new Error("Email is already in use");
+            error.statusCode = 400;
+            throw error;
+        }
+
+        const existingUserByUsername = await UserRepository.getByUsername(username);
+        if (existingUserByUsername) {
+            const error = new Error("Username is already in use");
+            error.statusCode = 400;
+            throw error;
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const newUser = await UserRepository.create({
+            name,
+            username,
+            email,
+            isVerified: false,
+            password: hashedPassword,
+            role,
+            createdBy: currentUserID,
+        });
+
+        return {
+            id: newUser.id,
+            name: newUser.name,
+            username: newUser.username,
+            email: newUser.email,
+            role: newUser.role,
+            createdBy: newUser.created_by,
+            isVerified: newUser.is_verified,
+        };
+    }
 }
 
 export default UserService;

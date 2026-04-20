@@ -17,7 +17,7 @@ export const loginSchema = Joi.object({
     }),
 })
 
-export const createStaffSchema = Joi.object({
+export const createUserSchema = Joi.object({
     name: Joi.string().min(3).max(100).required()
     .messages({
         'string.base': 'Name must be a string',
@@ -25,6 +25,15 @@ export const createStaffSchema = Joi.object({
         'string.min': 'Name should have a minimum length of {#limit}',
         'string.max': 'Name should have a maximum length of {#limit}',
         'any.required': 'Name is required',
+    }),
+    username: Joi.string().alphanum().min(3).max(30).required()
+    .messages({
+        'string.base': 'Username must be a string',
+        'string.empty': 'Username is required',
+        'string.alphanum': 'Username must only contain alphanumeric characters',
+        'string.min': 'Username should have a minimum length of {#limit}',
+        'string.max': 'Username should have a maximum length of {#limit}',
+        'any.required': 'Username is required',
     }),
     email: Joi.string().email().required()
     .messages({
@@ -41,11 +50,11 @@ export const createStaffSchema = Joi.object({
         'string.max': 'Password should have a maximum length of {#limit}',
         'any.required': 'Password is required',
     }),
-    role: Joi.string().valid("CASHIER", "KITCHEN").required()
+    role: Joi.string().valid("ADMIN", "STAFF").required()
     .messages({
         'string.base': 'Role must be a string',
         'string.empty': 'Role is required',
-        'any.only': 'Role must be either CASHIER or KITCHEN',
+        'any.only': 'Role must be either ADMIN or STAFF',
         'any.required': 'Role is required',
     }),
 }); 

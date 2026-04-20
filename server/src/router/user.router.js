@@ -7,7 +7,7 @@ import catchAsync from "../middleware/catchAsync.middleware.js";
 import timeout from "connect-timeout";
 
 import { 
-  createStaffSchema ,
+  createUserSchema,
   loginSchema,
   updateStaffSchema
 } from "../validation/user.validation.js";
@@ -33,10 +33,10 @@ router.get(
   catchAsync(UserController.getMyUserDataController)
 );
 router.post(
-  "/staff", 
+  "/", 
   validateToken,
   timeout('8s'),
-  validateSchema(createStaffSchema),
+  validateSchema(createUserSchema),
   authorizedRoles("ADMIN", "DEVELOPER"), 
   catchAsync(UserController.createStaffController)
 );
