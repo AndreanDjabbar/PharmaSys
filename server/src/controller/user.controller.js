@@ -1,4 +1,5 @@
 import UserService from "../service/user.service.js";
+import { NODE_ENV } from "../util/env.util.js";
 import { responseSuccess } from "../util/response.util.js"; 
 
 export const getMyUserDataController = async (req, res) => {  
@@ -134,19 +135,19 @@ export const logoutController = async (req, res) => {
 };
 
 export const loginController = async (req, res) => {
-  const { email, password } = req.body;
-  const result = await UserService.login(email, password);
-  const token = result.token;
-  
-  res.cookie("token", token, {
-    httpOnly: true,
-    secure: NODE_ENV === "production",
-    sameSite: "Lax",
-    maxAge: COOKIE_TOKEN_EXPIRES_HOURS * 60 * 60 * 1000,
-  });
-  return responseSuccess(res, 200, "Login successful", "data", {
-    user: result.user,
-  });
+    const { emailOrUsername, password } = req.body;
+    const result = await UserService.login(emailOrUsername, password);
+    const token = result.token;
+    
+    res.cookie("token", token, {
+        httpOnly: true,
+        secure: NODE_ENV === "production",
+        sameSite: "Lax",
+        maxAge: 24 * 60 * 60 * 1000,
+    });
+    return responseSuccess(res, 200, "Login successful", "data", {
+        user: result.user,
+    });
 };
 
 export const createTenantController = async (req, res) => {

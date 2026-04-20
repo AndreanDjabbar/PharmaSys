@@ -1,5 +1,6 @@
 import UserRepository from "../repository/user.repository.js";
 import bcrypt from "bcrypt";
+import { generateJWTToken } from "../util/jwt.util.js";
 
 class UserService {
     static async getMyUserData(currentUserID) {
@@ -12,13 +13,14 @@ class UserService {
         return {
             id: user.id,
             name: user.name,
+            username: user.username,
             role: user.role,
             email: user.email,
-            restaurantId: user.restaurant_id,
         };
     }
-    static async login(email, password) {
-        const user = await UserRepository.getByEmail(email);
+
+    static async login(emailOrUsername, password) {
+        const user = await UserRepository.getUserByEmailOrUsername(emailOrUsername);
         if (!user) {
             const error = new Error("User not found");
             error.statusCode = 404;
@@ -37,44 +39,19 @@ class UserService {
             throw error;
         } 
 
-        if (!user.is_verified) {
-            const otpCode = generateOTPNumber();
-            const emailVerificationToken = generateRandomToken(100);
-            const redisKey = `emailVerification:${user.id}`;
-
-            const redisClient = await getRedisClient();
-            await redisClient.del(redisKey);
-            await redisClient.hset(redisKey, {
-                otpCode,
-                emailVerificationToken
-            });
-            await redisClient.expire(redisKey, 5 * 60);
-            sendVerificationEmail(email, emailVerificationToken, otpCode);
-
-            const error = new Error("Email not verified. Please check your email for OTP verification.");
-            error.statusCode = 403;
-            error.data = {
-                token: emailVerificationToken
-            }
-            throw error;
-        }
-
         const tokenJWT = generateJWTToken({
             userID: user.id,
             email: user.email,
+            username: user.username,
             role: user.role
         });
-
-        const expiresAt = new Date();
-        expiresAt.setHours(expiresAt.getHours() + 24);
-
         return {
             user: {
                 id: user.id,
                 name: user.name,
                 email: user.email,
+                username: user.username,
                 role: user.role,
-                restaurantId: user.restaurant_id
             },
             token: tokenJWT,
         };
